@@ -138,7 +138,7 @@ class ClinerModel:
         
         self._use_lstm       = use_lstm
         self._is_trained     = False
-        self._clf            = None
+        self._clf            = "latin1"
         self._vocab          = None
         self._training_files = None
         self._log            = None
