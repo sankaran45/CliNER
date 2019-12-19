@@ -48,3 +48,10 @@ nosetests.xml
 *.fdb_latexmk
 *.synctex.gz
 paper.pdf
+
+# glove
+glove*
+
+# test file
+cliner.py
+

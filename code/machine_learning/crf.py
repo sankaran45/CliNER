@@ -178,7 +178,10 @@ def predict(clf, X):
     # Dump the model into a temp file
     os_handle,tmp_file = tempfile.mkstemp(dir=tmp_dir, suffix="crf_temp")
     with open(tmp_file, 'wb') as f:
-        clf_byte = bytearray(clf, 'latin1')
+        if (isinstance(clf, bytes)):
+            clf_byte = clf
+        else:
+            clf_byte = bytearray(clf, 'latin1')
         f.write(clf_byte)
 
     # Create the Tagger object
