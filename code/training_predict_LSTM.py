@@ -87,7 +87,7 @@ def train_step(sess, dataset, sequence_number, model):
     #print loss
     return loss,accuracy, transition_params_trained
                     
-def prediction_step(sess, dataset, dataset_type, model,epoch_number,results_folder,transition_params_trained,use_crf=True):
+def prediction_step(sess, dataset, dataset_type, model,epoch_number,results_folder,transition_params_trained,use_crf=False):
     print('Evaluate model on the {0} set'.format(dataset_type))
     all_predictions = []
     all_y_true = []
@@ -136,41 +136,40 @@ def prediction_step(sess, dataset, dataset_type, model,epoch_number,results_fold
         
         prediction_list.append(prediction_labels)
         
-        
-
-        if dataset!='deploy':
-          for prediction, token, gold_label in zip(prediction_labels, dataset.tokens[dataset_type][i], gold_labels):
-            results=(token +" " + "true " + gold_label + " " +prediction) 
-           
-            if dataset_type=="test":
-                f_store.write(results+ "\n")
-                
-            if dataset_type=="train":
-                f_store_train.write(results+ "\n")
-                
-            if dataset_type=="valid":
-                f_store_valid.write(results+ "\n")
-                
-          if dataset_type=="test":
-            f_store.write("\n")
-          if dataset_type=="train":
-            f_store_train.write("\n")
-          if dataset_type=="valid":
-              f_store_valid.write("\n")
-            
-    if dataset_type=='deploy':
+        if dataset_type=='deploy':
             return prediction_list    
+        else:
+            for prediction, token, gold_label in zip(prediction_labels, dataset.tokens[dataset_type][i], gold_labels):
+                results=(token +" " + "true " + gold_label + " " +prediction) 
+           
+                if dataset_type=="test":
+                    f_store.write(results+ "\n")
+                    
+                if dataset_type=="train":
+                    f_store_train.write(results+ "\n")
+                    
+                if dataset_type=="valid":
+                    f_store_valid.write(results+ "\n")
+                
+            if dataset_type=="test":
+                f_store.write("\n")
+            if dataset_type=="train":
+                f_store_train.write("\n")
+            if dataset_type=="valid":
+                f_store_valid.write("\n")
+            
     #f_store.write("EPOCHE END" + "\n")        
-    new_y_pred, new_y_true, new_label_indices, new_label_names, _, _ = remap_labels(all_predictions, all_y_true, dataset)
+    #new_y_pred, new_y_true, new_label_indices, new_label_names, _, _ = remap_labels(all_predictions, all_y_true, dataset)
     #print (sklearn.metrics.classification_report(new_y_true, new_y_pred, digits=4, labels=new_label_indices, target_names=new_label_names))
     
     f_store.close()
     f_store_train.close()
+    f_store_valid.close()
+    
     ###### CONL
-    conll_evaluation_script = os.path.join('.', 'conlleval') 
+    conll_evaluation_script = os.path.join('.', 'conlleval.pl') 
     conll_output_filepath = '{0}_conll_evaluation.txt'.format(store_at)
     shell_read=store_at
-    
     
     if dataset_type=="train":
         print ("TRAIN")

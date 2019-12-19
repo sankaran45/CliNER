@@ -14,7 +14,7 @@ import argparse
 import pickle
 import sys
 
-import tools
+import tools 
 from model import ClinerModel
 from notes.documents import Document
 

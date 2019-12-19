@@ -45,7 +45,7 @@ def load_parameters_from_file(parameters_file_name):
            d[key]=int(val)
            continue
        if is_boolean(val):
-           d[key]=bool(val)
+           d[key]=(val.lower()=="true")
            continue
        d[key] = val
     return d 
@@ -254,20 +254,20 @@ def get_parsed_conll_output(conll_output_filepath):
     parsed_output = {}
     line = conll_output[1].split()
     parsed_output['all'] = {'accuracy': float(line[1]),
-                            'precision': float(line[3]),
-                            'recall':float(line[5]),
-                            'f1':float(line[7])}
+                            'precision': float(line[6]),
+                            'recall':float(line[8]),
+                            'f1':float(line[10])}
     total_support = 0
     for line in conll_output[2:]:
         line = line.split()
         phi_type = line[0].replace('_', '-')
         #print (phi_type)
        # print (line)
-        support = int(line[7])
+        support = int(line[10]) ## was 7
         total_support += support
-        parsed_output[phi_type] = {'precision': float(line[2]),
-                            'recall':float(line[4]),
-                            'f1':float(line[6]),
+        parsed_output[phi_type] = {'precision': float(line[5]),
+                            'recall':float(line[7]),
+                            'f1':float(line[9]),
                             'support':support}
     parsed_output['all']['support'] = total_support
 

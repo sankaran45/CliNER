@@ -76,6 +76,17 @@ class Dataset(object):
         self.debug = debug
 
 
+    def _log(self):
+        print("Train Tokens - " + str(len(self.tokens['train'])))
+        print ("Train Labels - " + str(len(self.labels['train'])))
+        print ("TtoI - " + str(len(self.token_to_index)))
+        print ("CtoI - " + str(len(self.character_to_index)))
+        print ("UNK TOKENS - " + str(len(self.tokens_mapped_to_unk)))
+        print ("UNIQUE LABELS - " + str(self.unique_labels))
+        print ("CLASSES - " + str(self.number_of_classes))
+        print ("VOC SIZE - " + str(self.vocabulary_size))
+        print ("ALPHA SIZE - " + str(self.alphabet_size))
+        
     def _parse_dataset(self, dataset_filepath, dataset_type, sentences_list=[],tags_list=[], Not_here=False):
         
         token_count = collections.defaultdict(lambda: 0) #initialized by a function
@@ -114,9 +125,6 @@ class Dataset(object):
         new_token_sequence=[]
         new_label_sequence = []
         #new_token_features_sequence=[]
-        
-     
-        
         
         #labels, tokens, token_count, label_count, character_count,features,feature_file_name,feature_vector_size
         if Not_here==False:
@@ -210,13 +218,11 @@ class Dataset(object):
                 token_to_vector = hd.load_pretrained_token_embeddings(parameters)
         else:
             token_to_vector = {}
-
+        
         all_tokens_in_pretraining_dataset = []
         all_characters_in_pretraining_dataset = []
         
         if parameters['use_pretrained_model']:
-            
-            
             
             #temp_pretrained_dataset_adress="./models/NN_models/1235-4/dataset.pickle"  #"./models/NN_models/1234-5/dataset.pickle"
             if pretrained_dataset==None:
@@ -436,6 +442,8 @@ class Dataset(object):
         
         self.feature_vector_size=0
         
+        
+        self._log()
         
         return token_to_vector
         

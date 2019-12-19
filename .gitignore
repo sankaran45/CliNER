@@ -54,4 +54,7 @@ glove*
 
 # test file
 cliner.py
+*.sh
 
+# intermediate
+eval

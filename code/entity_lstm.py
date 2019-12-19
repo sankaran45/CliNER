@@ -1,4 +1,5 @@
-import tensorflow as tf
+#import tensorflow as tf
+import tensorflow.compat.v1 as tf
 import numpy as np
 import codecs
 import re
@@ -6,7 +7,7 @@ import time
 #import utils_tf
 #import utils_nlp
 import helper_dataset as hd
-import tensorflow.contrib.layers as layers
+#import tensorflow.contrib.layers as layers
 import os
 import pickle
 import utils_tf
@@ -62,16 +63,16 @@ def bidirectional_LSTM(input, hidden_state_dimension, initializer, sequence_leng
         for direction in ["forward", "backward"]:
             with tf.variable_scope(direction):
                 # LSTM cell
-                lstm_cell[direction] = tf.contrib.rnn.CoupledInputForgetGateLSTMCell(hidden_state_dimension, use_peepholes=False, forget_bias=1.0, initializer=initializer, state_is_tuple=True, activation=tf.tanh) # tf.tanh (default to RELU)
+                #lstm_cell[direction] = tf.contrib.rnn.CoupledInputForgetGateLSTMCell(hidden_state_dimension, use_peepholes=False, forget_bias=1.0, initializer=initializer, state_is_tuple=True, activation=tf.tanh) # tf.tanh (default to RELU)
+                lstm_cell[direction] = tf.nn.rnn_cell.LSTMCell(hidden_state_dimension, use_peepholes=False,forget_bias=1.0,initializer=initializer,state_is_tuple=True,activation=tf.tanh)
                # lstm_cell[direction] = tf.contrib.rnn_cell.GRUCell(hidden_state_dimension,activation=tf.tanh,)
-                
-                
+               
                 # initial state: http://stackoverflow.com/questions/38441589/tensorflow-rnn-initial-state
                 initial_cell_state = tf.get_variable("initial_cell_state", shape=[1, hidden_state_dimension], dtype=tf.float32, initializer=initializer)
                 initial_output_state = tf.get_variable("initial_output_state", shape=[1, hidden_state_dimension], dtype=tf.float32, initializer=initializer)
                 c_states = tf.tile(initial_cell_state, tf.stack([batch_size, 1]))
                 h_states = tf.tile(initial_output_state, tf.stack([batch_size, 1]))
-                initial_state[direction] = tf.contrib.rnn.LSTMStateTuple(c_states, h_states)
+                initial_state[direction] = tf.nn.rnn_cell.LSTMStateTuple(c_states, h_states)
 
         # sequence_length must be provided for tf.nn.bidirectional_dynamic_rnn due to internal bug
         outputs, final_states = tf.nn.bidirectional_dynamic_rnn(lstm_cell["forward"],
@@ -123,7 +124,8 @@ class EntityLSTM(object):
         self.vocabulary_size=dataset.vocabulary_size
 
         # Internal parameters
-        initializer = tf.contrib.layers.xavier_initializer()
+        #initializer = tf.contrib.layers.xavier_initializer()
+        initializer = tf.glorot_uniform_initializer()
 
         if parameters['use_character_lstm']:
             with tf.variable_scope("character_embedding"):
@@ -151,10 +153,6 @@ class EntityLSTM(object):
                 # print (w)
 
              # sentence_inputs = tf.reshape(word_level_output, [self.document_size, self.sentence_size, self.word_output_size])
-
-
-
-
 
         # Token embedding layer
         with tf.variable_scope("token_embedding"):
@@ -199,8 +197,10 @@ class EntityLSTM(object):
 
         # Token LSTM layer
         with tf.variable_scope('token_lstm') as vs:
-            if parameters['Use_LSTM']==True: token_lstm_output = bidirectional_LSTM(token_lstm_input_drop_expanded, parameters['token_lstm_hidden_state_dimension'], initializer, output_sequence=True)
-            else: token_lstm_output = bidirectional_GRU(token_lstm_input_drop_expanded, parameters['token_lstm_hidden_state_dimension'], initializer, output_sequence=True)
+            if parameters['Use_LSTM']==True: 
+                token_lstm_output = bidirectional_LSTM(token_lstm_input_drop_expanded, parameters['token_lstm_hidden_state_dimension'], initializer, output_sequence=True)
+            else: 
+                token_lstm_output = bidirectional_GRU(token_lstm_input_drop_expanded, parameters['token_lstm_hidden_state_dimension'], initializer, output_sequence=True)
             token_lstm_output_squeezed = tf.squeeze(token_lstm_output, axis=0)
             self.token_lstm_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=vs.name)
 
@@ -229,6 +229,7 @@ class EntityLSTM(object):
             self.feedforward_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=vs.name)
 
         # CRF layer
+        parameters['use_crf'] = False # for now
         if parameters['use_crf']:
             print ("CRF IS IN USE")
             with tf.variable_scope("crf") as vs:
@@ -288,8 +289,6 @@ class EntityLSTM(object):
         self.summary_op = tf.summary.merge_all()
         self.saver = tf.train.Saver(max_to_keep=100)
         
-     
-
     def define_training_procedure(self, parameters):
         # Define training procedure
         self.global_step = tf.Variable(0, name="global_step", trainable=False)

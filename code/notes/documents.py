@@ -82,7 +82,8 @@ class Document:
         else:
             raise Exception('Cannot write concept file: must specify labels')
 
-        concept_tuples = tok_labels_to_concepts(self._tok_sents, token_labels)
+        concept_tuples = tok_labels_to_concepts(self._tok_sents, token_labels[0])
+        #concept_tuples = tok_labels_to_concepts(self._tok_sents, token_labels)
 
         # For each classification
         for classification in concept_tuples:

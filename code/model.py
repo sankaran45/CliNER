@@ -20,7 +20,16 @@ from notes.documents import labels as tag2id, id2tag
 from tools           import flatten, save_list_structure, reconstruct_list
 from tools           import print_str, print_vec, print_files, write
 
-
+import DatasetCliner_experimental as Exp
+import tensorflow.compat.v1 as tf
+import entity_lstm as entity_model
+import training_predict_LSTM
+import pickle
+import copy
+import helper_dataset as hd
+import shutil
+            
+tf.disable_v2_behavior()
 cliner_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 tmp_dir = os.path.join(cliner_dir, 'data', 'tmp')
 
@@ -147,16 +156,6 @@ class ClinerModel:
         # Import the tools for either CRF or LSTM
         if use_lstm:
             # NEW
-            import DatasetCliner_experimental as Exp
-
-            import tensorflow as tf
-            import entity_lstm as entity_model
-            import training_predict_LSTM
-            import pickle
-            import copy
-            import helper_dataset as hd
-            import shutil
-                    
             self._pretrained_dataset=None
             self._pretrained_wordvectors=None
             
@@ -194,7 +193,7 @@ class ClinerModel:
             self.train_fit(train_sents,train_labels,val_sents=val_sents,val_labels=val_labels,test_sents=test_sents,test_labels=test_labels)
 
         else:
-            print ("NO DEV")
+            print ("NO VAL - USE DEV SPLIT")
             self.train_fit(train_sents, train_labels, dev_split=0.1,
                            test_sents=test_sents, test_labels=test_labels)
 
@@ -236,21 +235,16 @@ class ClinerModel:
         # metadata
           self._time_train_end = strftime("%Y-%m-%d %H:%M:%S", localtime())
 
-          
-          
-          
         else:
-          print ("IN ERROR CHECK")
-          print (dev_split)
           parameters,dataset,best = generic_train('all', 
-                                                              train_sents             ,
-                                                              train_labels            ,
-                                                              self._use_lstm          ,
-                                                              val_sents=val_sents     ,
-                                                              val_labels=val_labels   ,
-                                                              test_sents=test_sents   ,
-                                                              test_labels=test_labels ,
-                                                              dev_split=dev_split     )
+                                                  train_sents             ,
+                                                  train_labels            ,
+                                                  self._use_lstm          ,
+                                                  val_sents=val_sents     ,
+                                                  val_labels=val_labels   ,
+                                                  test_sents=test_sents   ,
+                                                  test_labels=test_labels ,
+                                                  dev_split=dev_split     )
           self._is_trained = True
           self.pretrained_dataset=dataset
           self.parameters=parameters
@@ -258,13 +252,10 @@ class ClinerModel:
           self._time_train_end = strftime("%Y-%m-%d %H:%M:%S", localtime())
           print ("BEST EPOCH")
           print (best)
-        #self._vocab = voc
-        #self._clf   = clf
-        #self._score = dev_score
-        #self._features = enabled_features
-
-        # metadata
-        #self._time_train_end = strftime("%Y-%m-%d %H:%M:%S", localtime())
+            #self._vocab = voc
+            #self._clf   = clf
+            #self._score = dev_score
+            #self._features = enabled_features
 
 
     def predict_classes_from_document(self, document):
@@ -366,10 +357,13 @@ def generic_train(p_or_n, train_sents, train_labels, use_lstm, val_sents=None, v
         ind = int(dev_split*len(train_sents))
 
         val_sents   = train_sents[:ind ]
-        train_sents = train_sents[ ind:]
-
+        train_sents = train_sents[ 2*ind:]
+        test_sents  = train_sents[ind:2*ind]
+        
         val_labels   = train_labels[:ind ]
-        train_labels = train_labels[ ind:]
+        train_labels = train_labels[ 2*ind:]
+        test_labels = train_labels[ind:2*ind]
+        
     else:
         sys.stdout.write('\tUsing existing validation data\n')
 
@@ -378,40 +372,35 @@ def generic_train(p_or_n, train_sents, train_labels, use_lstm, val_sents=None, v
 
 
     if use_lstm:
-        print ("TESTING NEW DATSET OBJECT")
+        print ("LSTM - loading new dataset object")
         dataset = Exp.Dataset()
         
         parameters=hd.load_parameters_from_file("LSTM_parameters.txt")
         parameters['use_pretrained_model']=False
-        
-
         
         Datasets_tokens={}
         Datasets_labels={}
                
         Datasets_tokens['train']=train_sents
         Datasets_labels['train']=train_labels
+        print ("Training set has - " + str(len(Datasets_tokens['train'])))
         
-        if  val_sents!=None:
+        if  val_sents:
             Datasets_tokens['valid']=val_sents
             Datasets_labels['valid']=val_labels
+            print ("Validation set has - " + str(len(Datasets_tokens['valid'])))
             
-        if test_sents!=None:
+        if test_sents:
             Datasets_tokens['test']=test_sents
             Datasets_labels['test']=test_labels
-
-        dataset.load_dataset(Datasets_tokens,Datasets_labels,"",parameters)
+            print ("Test set has - " + str(len(Datasets_tokens['test'])))
+            
+        token_to_vector = dataset.load_dataset(Datasets_tokens,Datasets_labels,"",parameters)
         pickle.dump(dataset, open(os.path.join(parameters['model_folder'], 'dataset.pickle'), 'wb'))
         
-        print (Datasets_tokens['valid'][0])
-        print (Datasets_tokens['test'][0])
-        
-
         parameters['Feature_vector_length']=dataset.feature_vector_size
         parameters['use_features_before_final_lstm']=False 
         parameters['learning_rate']=0.005
-        
-
         
         sess = tf.Session()
         number_of_sent=list(range(len(dataset.token_indices['train'])))
@@ -419,7 +408,7 @@ def generic_train(p_or_n, train_sents, train_labels, use_lstm, val_sents=None, v
         with sess.as_default():
             model=entity_model.EntityLSTM(dataset,parameters)
             sess.run(tf.global_variables_initializer())
-            model.load_pretrained_token_embeddings(sess, dataset,parameters)
+            model.load_pretrained_token_embeddings(sess, dataset,parameters,token_to_vector)
             epoch_number = -1
             transition_params_trained = np.random.rand(5+2,5+2)
             values={}
@@ -432,9 +421,9 @@ def generic_train(p_or_n, train_sents, train_labels, use_lstm, val_sents=None, v
             
         print ("START TRAINING")    
         
+        tmo_dir = parameters['conll_like_result_folder']
         eval_dir = os.path.join(tmo_dir, 'cliner_eval_%d' % random.randint(0,256)+os.sep)
         parameters['conll_like_result_folder']=eval_dir
-        
     
         test_temp = os.path.join(parameters['conll_like_result_folder'], 'test/')
         train_temp = os.path.join(parameters['conll_like_result_folder'], 'train/')
@@ -445,8 +434,6 @@ def generic_train(p_or_n, train_sents, train_labels, use_lstm, val_sents=None, v
         os.mkdir(train_temp)
         os.mkdir(valid_temp)
 
-        
-        
         while epoch_number<90: 
             average_loss_per_phrase=0
             accuracy_per_phase=0
@@ -465,8 +452,6 @@ def generic_train(p_or_n, train_sents, train_labels, use_lstm, val_sents=None, v
                          print('Training {0:.2f}% done\n'.format(step/len(sequence_numbers)*100))
 
                 model_saver.save(sess, os.path.join(parameters['model_folder'], 'model_{0:05d}.ckpt'.format(epoch_number)))    
-                
-
                 
                 total_loss=average_loss_per_phrase
                 total_accuracy=accuracy_per_phase

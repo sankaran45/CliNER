@@ -1,5 +1,5 @@
-token_pretrained_embedding_filepath vectors2.txt
-load_all_pretrained_token_embeddings False
+token_pretrained_embedding_filepath glove.6B.100d.txt
+load_all_pretrained_token_embeddings True
 load_only_pretrained_token_embeddings False
 tagging_format bio
 use_character_lstm True
@@ -17,6 +17,6 @@ remap_unknown_tokens_to_unk True
 learning_rate 0.005
 check_for_lowercase True
 check_for_digits_replaced_with_zeros True
-model_folder ./models/NN_models/Test_November
-conll_like_result_folder ./RESULTS/TEST_SAVER/NOVEMBER_DEBUG/
-model_name model_00001.ckpt   
+model_folder ./models/test
+conll_like_result_folder ./eval
+model_name model_00001.ckpt 
